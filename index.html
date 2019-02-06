@@ -5,7 +5,55 @@
     <title>USA Airports (2019)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"/>
     <style>
-        html, body, #map { width: 100%; height: 100%; margin: 0; background: #fff; }
+        html, body, #map {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          background: #fff; }
+
+          .legend {
+                    line-height: 16px;
+                    width: 140px;
+                    color: #333333;
+                    font-family: 'Titillium Web', sans-serif;
+                    padding: 6px 8px;
+                    background: white;
+                    background: rgba(255,255,255,0.5);
+                    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+                    border-radius: 5px;
+                }
+
+                .legend i {
+                    width: 16px;
+                    height: 16px;
+                    float: left;
+                    margin-right: 8px;
+                    opacity: 0.9;
+                }
+
+                .legend img {
+                    width: 16px;
+                    height: 16px;
+                    margin-right: 3px;
+                    float: left;
+                }
+
+                .legend p {
+                    font-size: 12px;
+                    line-height: 16px;
+                    margin: 0;
+                }
+
+        .plane-color {
+          color: cyan
+
+        }
+
+        .plane-take{
+          color: purple
+        }
+
+
     </style>
     <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.min.js"></script>
@@ -40,17 +88,22 @@ var colors = chroma.scale('Set2').mode('lch').colors(9);
 for (i = 0; i < 1; i++) {
     $('head').append($("<style> .marker-color-" + (i + 1).toString() + " { color: " + colors[i] + "; font-size: 15px; text-shadow: 0 0 3px #ffffff;} </style>"));
 }
-  var airports = null;
+
+var airports = null;
 airports =L.geoJson.ajax("assets/airports.geojson", {
-  onEachfeature:function (feature, layer) {
-    layert.bindPopup(feature.properties.AIRPT_NAME);
+  onEachFeature:function (feature, layer) {
+    layer.bindPopup("Airport:" + feature.properties.AIRPT_NAME);
   },
   pointToLayer: function (feature, latlng) {
     if(feature.properties.CNTL_TWR == "Y")//there is a tower
-      return L.marker(latlng, {icon: L.divIcon({className: "fas fa-plane-departure"})});
+      return L.marker(latlng, {icon: L.divIcon({className: "fas fa-plane-departure plane-color"})});
     else//there is no towers
-      return L.marker(latlng, {icon: L.divIcon({className: "fas fa-plane"})});
-  }
+      return L.marker(latlng, {icon: L.divIcon({className: "fas fa-plane plane-take"})});
+  },
+
+      attribution: 'Airport locations Data &copy; Data.gov | US States &copy; D3 | Base Map &copy; CartoDB | Made By Scott Schmidt'
+
+
 }).addTo(mymap);
 
 // function (feature, latlng) {
@@ -59,17 +112,60 @@ airports =L.geoJson.ajax("assets/airports.geojson", {
 //     else if (feature.properties.CNTL_TWR == "N")  { id = 1; }
 //
 //     return L.marker(latlng, {icon: L.divIcon({className: 'fa fa-plane- marker-color-' + (id + 1).toString() })});
+// 6. Set function for color ramp
+  colors = chroma.scale('OrRd').colors(5); //colors = chroma.scale('OrRd').colors(5);
 
-  airports= L.geoJson.ajax("assets/airports.geojson",{
-      attribution: 'Airport location Data &copy; Map Cruzin | USA states &copy; Oregon Explorer | Base Map &copy; CartoDB | Made By Bo Zhao'
-  });
-  // Add the cellTowers to the map.
-  // airports.addTo(mymap);
+  function setColor(density) {
+      var id = 0;
+      if (density > 18) { id = 4; }
+      else if (density > 13 && density <= 18) { id = 3; }
+      else if (density > 10 && density <= 13) { id = 2; }
+      else if (density > 5 &&  density <= 10) { id = 1; }
+      else  { id = 0; }
+      return colors[id];
+  }
+  // 7. Set style function that sets fill color.md property equal to cell tower density
+  function style(feature) {
+      return {
+          fillColor: setColor(feature.properties.count),
+          fillOpacity: 0.4,
+          weight: 2,
+          opacity: 1,
+          color: '#b4b4b4',
+          dashArray: '4'
+      };
+  }
+var states = null;
+states = L.geoJson.ajax("assets/us-states.geojson",{style: style
+}).addTo(mymap);
 
-L.geoJson.ajax("assets/us-states.geojson").addTo(mymap);
+var legend =L.control({postition: 'topright'});
 
+legend.onAdd = function () {
 
+  var div = L.DomUtil.create('div', 'legend');
+        div.innerHTML += '<b> Airport Density</b><br />';
+        div.innerHTML += '<i style="background: ' + colors[4] + '; opacity: 0.5"></i><p>19+</p>';
+        div.innerHTML += '<i style="background: ' + colors[3] + '; opacity: 0.5"></i><p>14-18</p>';
+        div.innerHTML += '<i style="background: ' + colors[2] + '; opacity: 0.5"></i><p>11-13</p>';
+        div.innerHTML += '<i style="background: ' + colors[1] + '; opacity: 0.5"></i><p> 6-10</p>';
+        div.innerHTML += '<i style="background: ' + colors[0] + '; opacity: 0.5"></i><p> 0- 5</p>';
+        div.innerHTML += '<hr><b>Control Tower<b><br />';
+        div.innerHTML += '<i class="fas fa-plane-departure plane-color""></i><p> Yes </p>';
+        div.innerHTML += '<i class="fas fa-plane plane-take"></i><p> No </p>';
+        // div.innerHTML += '<i class="fa fa-signal marker-color-3"></i><p> RCC Minnesota</p>';
+        // div.innerHTML += '<i class="fa fa-signal marker-color-4"></i><p> Verizon</p>';
+        // div.innerHTML += '<i class="fa fa-signal marker-color-5"></i><p> US Cellular</p>';
+        // div.innerHTML += '<i class="fa fa-signal marker-color-6"></i><p> Hood River Cellular</p>';
+        // div.innerHTML += '<i class="fa fa-signal marker-color-7"></i><p> Medford Cellular</p>';
+        // div.innerHTML += '<i class="fa fa-signal marker-color-8"></i><p> Oregon RSA</p>';
+        // div.innerHTML += '<i class="fa fa-signal marker-color-9"></i><p> Salem Cellular</p>';
 
+        return div;
+    };
+
+    legend.addTo(mymap);
+L.control.scale({position: 'bottomright'}).addTo(mymap);
 
 
 
